@@ -1,139 +1,165 @@
 
 
----
-Frontend :
-http://localhost:3000
+# Weather Dashboard System Documentation
 
+## Overview
+This system is a weather dashboard application that allows users to:
+- Search for locations worldwide
+- Add weather widgets for selected locations
+- View current weather conditions
+- Manage (refresh/delete) weather widgets
 
-### **Weather Dashboard Documentation**
+The system consists of:
+1. Backend API (Node.js/Express)
+2. Frontend React application (Material UI)
+3. Integration with external weather and geocoding APIs
 
-#### **1. Core Functions**
-1. **`fetchWidgets()`**  
-   - Fetches saved weather widgets from the backend API.
-   - Updates the state and local storage with fetched data.
+## Backend Architecture
 
-2. **`createNewWidget(widget, weatherData)`**  
-   - Constructs a new weather widget object with:
-     - Unique ID generation (based on location name + random number)
-     - Location details (name, coordinates)
-     - Weather data (temperature, humidity, wind speed, units)
-     - Timestamps (createdAt, updatedAt)
+### Models
+**Widget Model (widgetModel.js)**
+- Defines the MongoDB schema for weather widgets with fields:
+  - id: Unique identifier (auto-generated)
+  - name: Location name
+  - description: Widget description
+  - location: Contains display names and coordinates
+  - weather: Contains current weather data
+  - timestamps: createdAt and updatedAt
 
-3. **`addNewWidget(result)`**  
-   - Adds a new weather widget:
-     - Checks for duplicate locations.
-     - Fetches weather data for the selected location.
-     - Saves the widget to the backend.
-     - Updates the widget list in state.
+### Routes (widgetRoutes.js)
+- GET /widgets - Fetch all widgets
+- POST /widgets - Create new widget
+- DELETE /widgets/:id - Delete widget by ID
 
-4. **`removeWidget(id)`**  
-   - Deletes a widget by ID:
-     - Calls backend API to remove the widget.
-     - Updates the widget list in state.
+### Controllers (widgetController.js)
+**addNewWidget**
+- Creates a new weather widget
+- Validates input data
+- Returns 201 on success or appropriate error codes
 
-5. **`handleSearch()`**  
-   - Triggers location search based on user input.
-   - Displays search results from OpenStreetMap/Google Places.
+**removeWidget**
+- Deletes a widget by ID
+- Validates ID parameter
+- Returns 200 on success or 404 if not found
 
-6. **`handleSelect(address)`**  
-   - Sets the selected address in the search field.
-   - Clears suggestions and search results.
+**fetchWidgets**
+- Retrieves all widgets
+- Returns array of widgets with count
 
-7. **`refreshAll()`**  
-   - Refreshes all widgets by re-fetching data from the backend.
+### Services
+**WidgetService.js**
+- Database operations:
+  - `getAllWidgets()`: Fetches all widgets
+  - `deleteWidgetById()`: Removes widget by ID
+  - `addWidget()`: Creates new widget
 
----
+**weather.service.js**
+- `getWeatherData()`: Fetches current weather from Open-Meteo API
+- Returns temperature, humidity, rain, wind data
 
-#### **2. UI & Interaction Flow**
-1. **Search Functionality**  
-   - Uses `usePlacesAutocomplete` for Google Places suggestions.
-   - Displays search results in a dropdown list.
-   - Allows selection of a location to add as a widget.
+**location.service.js**
+- `searchLocations()`: Uses Nominatim API for location search
+- Returns location names and coordinates
 
-2. **Widget Management**  
-   - Displays weather widgets in a responsive grid.
-   - Each widget shows:
-     - Location name
-     - Current weather (temperature, humidity, wind)
-     - Timestamp of last update
-   - Provides delete and refresh actions per widget.
+## Frontend Architecture
 
-3. **Loading & Error States**  
-   - Shows loading spinners during API calls.
-   - Displays error messages if API requests fail.
+### Main Components
+**WeatherDashboard (WeatherDashboard.js)**
+- Main container component
+- Manages widget state and API calls
+- Contains search functionality and widget grid
 
----
+**WeatherWidget (WeatherWidget.js)**
+- Displays individual weather widget
+- Shows location name, temperature, weather stats
+- Contains delete and refresh buttons
 
-#### **3. Data Flow**
-1. **Initial Load**  
-   - Fetches saved widgets on component mount.
+**WeatherStatItem (WeatherStatItem.js)**
+- Stat display component (reusable)
+- Shows label-value pairs for weather data
 
-2. **Adding a Widget**  
-   - User searches for a location → selects result → widget is created and saved.
+### Key Features
+1. **Location Search**
+   - Uses Google Places autocomplete
+   - Fallback to Nominatim API search
+   - Displays search results in dropdown
 
-3. **Deleting a Widget**  
-   - User clicks delete → widget is removed from backend and state.
+2. **Widget Management**
+   - Add new widgets with weather data
+   - Delete widgets
+   - Refresh all widgets
 
-4. **Refreshing Data**  
-   - Manual refresh triggers re-fetch of all widgets.
+3. **Data Display**
+   - Current temperature with icon
+   - Weather statistics (humidity, rain, wind)
+   - Formatted timestamps
 
----
+### State Management
+- Uses React useState for:
+  - Widgets list
+  - Search results
+  - Loading states
+  - Error messages
 
----
+### API Integration
+- Backend API calls using Axios
+- Open-Meteo for weather data
+- Nominatim for location search
 
-### **Backend Server Documentation**
+## Data Flow
 
-Backend :
-http://localhost:5001
+1. **Initial Load**
+   - Dashboard fetches existing widgets from backend
+   - Displays loading state during fetch
 
-#### **1. Server Setup**
-- **Framework**: Express.js  
-- **Middleware**:  
-  - `cors()`: Enables Cross-Origin Resource Sharing (CORS) for frontend (http://localhost:3000).  
-  - `express.json()`: Parses incoming JSON requests.  
+2. **Adding Widget**
+   - User searches for location
+   - Selects result → fetches weather data
+   - Creates widget → saves to backend
+   - Updates UI with new widget
 
-#### **2. Mock Data**
-- **`sampleWidgets`**:  
-  - Hardcoded array of 3 weather widgets (Berlin, Paris, New York).  
-  - Each widget includes:  
-    - Unique `id`, `name`, `description`.  
-    - `location` with display names and coordinates.  
-    - `weather` data (temperature, humidity, wind, units).  
-    - Timestamps (`createdAt`, `updatedAt`).  
+3. **Deleting Widget**
+   - User clicks delete → sends API request
+   - On success, removes from UI
+   - Shows error if deletion fails
 
-#### **3. MongoDB Setup (Commented Out)**
-- **Connection**:  
-  - Uses `mongoose.connect()` (disabled in current implementation).  
-- **Schema**:  
-  - `widgetSchema`: Defines structure for widgets in MongoDB (unused in mock mode).  
+4. **Refreshing Data**
+   - User clicks refresh button
+   - Refetches all widgets from backend
+   - Updates each widget's weather data
 
-#### **4. API Endpoints**
-1. **`POST /api/widgets`**  
-   - **Purpose**: Add a new weather widget.  
-   - **Request Body**: Requires `name` and `location.coordinates`.  
-   - **Response**:  
-     - Success: `201 Created` with the new widget.  
-     - Error: `400` (validation) or `500` (server error).  
+## Error Handling
+- Displays user-friendly error messages for:
+  - Failed API calls
+  - Duplicate locations
+  - Invalid inputs
+- Detailed errors in console for development
+- Loading indicators during operations
 
-2. **`GET /api/widgets`**  
-   - **Purpose**: Fetch all widgets.  
-   - **Response**:  
-     - Success: `200 OK` with `sampleWidgets` array.  
-     - Error: `500` (server error).  
+## Dependencies
 
-3. **`DELETE /api/widgets/:id`**  
-   - **Purpose**: Delete a widget by ID.  
-   - **Response**:  
-     - Success: `200 OK` with remaining widget count.  
-     - Error: `404` (not found) or `500` (server error).  
+### Backend
+- Express.js
+- Mongoose (MongoDB)
+- Axios (HTTP requests)
+- Open-Meteo SDK
 
-#### **5. Error Handling**
-- All endpoints include `try/catch` blocks to handle errors.  
-- Returns JSON with `success`, `message`, and contextual data.  
+### Frontend
+- React
+- Material UI
+- Axios
+- use-places-autocomplete (Google Places)
+- Open-Meteo SDK
 
-#### **6. Server Execution**
-- **Port**: `5001` (http://localhost:5001).  
-- **Start Command**: `node server.js` (logs confirmation on startup).  
+## API Endpoints
 
----
+**Backend API (localhost:5001)**
+- `GET /api/widgets` - Get all widgets
+- `POST /api/widgets` - Create widget
+- `DELETE /api/widgets/:id` - Delete widget
+
+**External APIs**
+- Open-Meteo - Weather data
+- Nominatim - Location search
+- Google Places - Autocomplete (frontend)
 
